@@ -103,11 +103,49 @@ export const login = async (req, res) => {
 
 
     }
-    catch(error){
-        console.log("Login error",error)
+    catch (error) {
+        console.log("Login error", error)
         res.status(500).json({
-            message:"server error"
+            message: "server error"
         })
     }
 
+
 }
+export const getMe = async (req, res) => {
+    try {
+        const result = await pool.query(
+            "select id,name,email,currency,created_at from users where id=$1",
+            [req.userId]
+        )
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "user not found"
+            })
+        }
+        res.json(result.rows[0])
+
+    }
+    catch (error) {
+        console.log("error occured", error)
+        res.status(501).json({
+            Message: "server not responding"
+        })
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
