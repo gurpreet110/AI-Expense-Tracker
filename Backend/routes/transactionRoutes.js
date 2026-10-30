@@ -2,7 +2,7 @@ import express from 'express'
 import{getTransactionById,createTransaction,getTranscation,updateTransaction,deleteTransaction} from '../controllers/TransactionsControllers.js'
 import{protect} from '../middleware/authMiddleware.js'
 
-const route=express.Router()
+const router=express.Router()
 router.use(protect)
 
 router.get('/',getTranscation)

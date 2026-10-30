@@ -1,6 +1,12 @@
 import express  from 'express'
-import {getBudgets,createBudget,deleteBudgets,updateBudgets} from '../controllers/budgetsControllers'
-import protect from '../middleware/authMiddleware'
+
+import {
+    getBudgets,
+    createBudget,
+    deleteBudgets,
+    updateBudgets
+} from '../controllers/budgetsControllers.js';
+import protect from '../middleware/authMiddleware.js';
 const router=express.Router()
 router.use(protect)
 
