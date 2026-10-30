@@ -59,9 +59,9 @@ export const updateCategory=async(req,res)=>{
     try{
         const result = await pool.query(
             `
-            update categories set name=coalense($1,name),
-            icon = coalense($2,icon),
-            color = coalense($3,color)
+            update categories set name=coalesce($1,name),
+            icon = coalesce($2,icon),
+            color = coalesce($3,color)
             where id=$4 and user_id=$5
             returning *`
 
@@ -76,7 +76,7 @@ export const updateCategory=async(req,res)=>{
     }catch(error){
         console.log("server error",error)
         res.status(592).json({
-            message:"server not vaidating results"
+            message:"server not validating results"
         })
     }
 
