@@ -1,4 +1,3 @@
-
 import pool from '../db.js';
 
 export const getBudgets = async (req, res) => {
@@ -8,6 +7,7 @@ export const getBudgets = async (req, res) => {
             SELECT
                 b.id,
                 b.category_id,
+                b.amount,
                 b.amount AS budget_amount,
                 b.period,
                 b.start_date,
@@ -62,89 +62,104 @@ export const getBudgets = async (req, res) => {
         });
     }
 };
-export const createBudget= async(req,res)=>{
-    const {categoryId,amount,period}=req.body
-    if(!categoryId ||!amoount){
-        res.status(401).json({
-            message:"value required"
-        })
-    }
-    if(!['monthly','weekly'].includes(period)){
-        res.status(401).json({
-            message:"only valid entry please"
-        })
-    }
-    try{
-        const today=new Date();
-        const monthStart=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`
-        const effectiveStart=startDate||monthStart
-        const result=await pool.query(`
-            INSERT INTO budgets (user_id,ategory_id,amount,period,start_date)
-            VALUES ($1,$2,$3,$4,$5)
-            RETURNING *
-            `[req.userId,categoryId,amount,period,effectiveStart]
-        )
-        res.status(201).json(result.rows[0])
-    }catch(error){
-        console.log("error occured ",error)
-        res.status(502).json({
-            message:"cant created budgets"
-        })
-    }
-}
 
+export const createBudget = async (req, res) => {
+    const { categoryId, amount, period = 'monthly', startDate } = req.body;
 
-export const updateBudgets=async(req,res)=>{
-    const {id}=req.params
-    const {amount,period}=req.body
+    if (!categoryId || amount === undefined || amount === null || Number(amount) <= 0) {
+        return res.status(400).json({
+            message: "Valid category and amount required"
+        });
+    }
 
-    try{
+    if (!['monthly', 'weekly'].includes(period)) {
+        return res.status(400).json({
+            message: "Period must be 'monthly' or 'weekly'"
+        });
+    }
+
+    try {
+        const today = new Date();
+        const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+        const effectiveStart = startDate || monthStart;
+
         const result = await pool.query(
             `
-            update budgets set amount=coalesce($1,name),
-            period= coalesce($2,period),
-            where id=$3 and user_id=$4
-            returning *`
+            INSERT INTO budgets (user_id, category_id, amount, period, start_date)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING *
+            `,
+            [req.userId, categoryId, amount, period, effectiveStart]
+        );
 
-            [amount,period,id,req.userId]
-        )
-        if(result.rows.length===0){
-            res.status(402).json({
-                message:"budget not found"
-            })
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error("Error creating budget:", error);
+        res.status(500).json({
+            message: "Could not create budget"
+        });
+    }
+};
+
+export const updateBudgets = async (req, res) => {
+    const { id } = req.params;
+    const { amount, period } = req.body;
+
+    try {
+        const result = await pool.query(
+            `
+            UPDATE budgets
+            SET amount = COALESCE($1, amount),
+                period = COALESCE($2, period)
+            WHERE id = $3 AND user_id = $4
+            RETURNING *
+            `,
+            [amount, period, id, req.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Budget not found"
+            });
         }
-        res.json(result.rows[0])
-    }catch(error){
-        console.log("server error",error)
-        res.status(592).json({
-            message:"server not vaidating results"
-        })
+
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("Update budget error:", error);
+        res.status(500).json({
+            message: "Server error updating budget"
+        });
     }
+};
 
-}
+export const deleteBudgets = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(
+            `DELETE FROM budgets WHERE id = $1 AND user_id = $2 RETURNING id`,
+            [id, req.userId]
+        );
 
-export const deleteBudgets=async(req,res)=>{
-    const {id}=req.params
-    try{
-        const result = pool.query(
-            `delete from budgets where id=$1 and user_id=$2 returning id`,
-            [id,user.id]
-        )
-        if(results.rows.length===0){
-            res.status(401).json({
-                message:"budgets not found"
-            })
-            res.json({
-                message:"budget deleted"
-            })
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Budget not found"
+            });
         }
 
+        res.status(200).json({
+            message: "Budget deleted successfully"
+        });
+    } catch (error) {
+        console.error("Deletion error:", error);
+        res.status(500).json({
+            message: "Server error deleting budget"
+        });
     }
-    catch(error){
-        console.log("deletion error",error)
-        res.status(501).json({
-            message:"Server error"
-        })
-    }
-}
+};
 
+export default {
+    getBudgets,
+    createBudget,
+    updateBudgets,
+    deleteBudgets
+};

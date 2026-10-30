@@ -1,108 +1,114 @@
-import pool from '../db.js'
+import pool from '../db.js';
 
-export const getCategories=async (req,res)=>{
-    try{
+export const getCategories = async (req, res) => {
+    try {
         const result = await pool.query(
-            `select * from categories where user_id=$1 order by type,name`,
-            [req,userid]
-        )
-        res.json(result.rows)
-    }
-    catch(error){
-        console.log("GetCategories error ",error)
+            `SELECT * FROM categories WHERE user_id = $1 ORDER BY type, name`,
+            [req.userId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        console.error("GetCategories error: ", error);
         res.status(500).json({
-            message:"server error"
-        })
+            message: "Server error"
+        });
     }
+};
 
-}
-
-export const createCategory = async(req,res)=>{
-    const {name,type,icon,color}=req.body
-    if(!name || !type){
+export const createCategory = async (req, res) => {
+    const { name, type, icon, color } = req.body;
+    if (!name || !type) {
         return res.status(400).json({
-            message:"name and type required"
-        })
+            message: "Name and type required"
+        });
     }
-    if(!['income','expense'].includes(type)){
+    if (!['income', 'expense'].includes(type)) {
         return res.status(400).json({
-            message:"Type must be income or expense only !"
-        })
+            message: "Type must be 'income' or 'expense' only!"
+        });
     }
-    try{
-        const result = await pool.query(
-            `insert into categaries (user_id,name,type,icon,color,is_default)
-            values ($1,$2,$3,$4,false)
-            returning *,
-            `
-            [req.userId,name,type,icon || null, color||null]
-        )
-        res.status(201).json(result.rows[0])
-    }catch(error){
-        if (error==='23505'){
-            return res.status(401).json({
-                message:"catogory with this name already exists "
-            })
-        }
-        console.log("Error :",error);
-        res.status(505).json({
-            message:"server not responding"
-        })
-        
-    }
-}
-
-export const updateCategory=async(req,res)=>{
-    const {id}=req.params
-    const {name,icon,color}=req.body
-
-    try{
+    try {
         const result = await pool.query(
             `
-            update categories set name=coalesce($1,name),
-            icon = coalesce($2,icon),
-            color = coalesce($3,color)
-            where id=$4 and user_id=$5
-            returning *`
-
-            [name,icon,color,id,req.userId]
-        )
-        if(result.rows.length===0){
-            res.status(402).json({
-                message:"value not found"
-            })
+            INSERT INTO categories (user_id, name, type, icon, color, is_default)
+            VALUES ($1, $2, $3, $4, $5, false)
+            RETURNING *
+            `,
+            [req.userId, name, type, icon || null, color || null]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        if (error.code === '23505') {
+            return res.status(409).json({
+                message: "Category with this name already exists"
+            });
         }
-        res.json(result.rows[0])
-    }catch(error){
-        console.log("server error",error)
-        res.status(592).json({
-            message:"server not validating results"
-        })
+        console.error("CreateCategory error:", error);
+        res.status(500).json({
+            message: "Server error creating category"
+        });
     }
+};
 
-}
+export const updateCategory = async (req, res) => {
+    const { id } = req.params;
+    const { name, icon, color } = req.body;
 
-export const deleteCategory=async(req,res)=>{
-    const {id}=req.params
-    try{
-        const result = pool.query(
-            `delete from categories where id=$1 and user_id=$2 returning id`,
-            [id,user.id]
-        )
-        if(results.rows.length===0){
-            res.status(401).json({
-                message:"category not found"
-            })
-            res.json({
-                message:"categories deleted"
-            })
+    try {
+        const result = await pool.query(
+            `
+            UPDATE categories
+            SET name = COALESCE($1, name),
+                icon = COALESCE($2, icon),
+                color = COALESCE($3, color)
+            WHERE id = $4 AND user_id = $5
+            RETURNING *
+            `,
+            [name, icon, color, id, req.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Category not found"
+            });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error("UpdateCategory error:", error);
+        res.status(500).json({
+            message: "Server error updating category"
+        });
+    }
+};
+
+export const deleteCategory = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const result = await pool.query(
+            `DELETE FROM categories WHERE id = $1 AND user_id = $2 RETURNING id`,
+            [id, req.userId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Category not found"
+            });
         }
 
+        res.status(200).json({
+            message: "Category deleted successfully"
+        });
+    } catch (error) {
+        console.error("DeleteCategory error:", error);
+        res.status(500).json({
+            message: "Server error deleting category"
+        });
     }
-    catch(error){
-        console.log("deletedCategory error",error)
-        res.status(501).json({
-            message:"Server error"
-        })
-    }
-}
+};
+
+export default {
+    getCategories,
+    createCategory,
+    updateCategory,
+    deleteCategory
+};

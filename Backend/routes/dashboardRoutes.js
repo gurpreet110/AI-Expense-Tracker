@@ -4,6 +4,7 @@ import protect from '../middleware/authMiddleware.js'
 
 const router=express.Router()
 router.use(protect)
+router.get('/summary',getSummary)
 router.get('/summery',getSummary)
 router.get('/category-breakdown',getCategoryBreakDown)
 router.get('/monthly-trend',getMonthlyTrend)

@@ -3,6 +3,7 @@ import pool from '../db.js';
 
 // 1. GET ALL TRANSACTIONS
 export const getTranscation = async (req, res) => {
+    const filters = { ...req.query, ...(req.body || {}) };
     const {
         startDate,
         endDate,
@@ -11,7 +12,7 @@ export const getTranscation = async (req, res) => {
         search,
         limit = 50,
         offset = 0
-    } = req.body;
+    } = filters;
 
     const conditions = ['t.user_id = $1'];
     const values = [req.userId];
